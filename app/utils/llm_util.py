@@ -7,10 +7,13 @@ from app.models import (
     DailyLog, Recommendation, User
 )
 from bson import ObjectId
+from dotenv import load_dotenv
 
 class FitnessLLMAgent:
     def __init__(self, model: str = "gpt-3.5-turbo", temperature: float = 0.7):
         """Initialize OpenAI client with API key from environment variable and default parameters."""
+        # Load environment variables from .env file
+        load_dotenv()
         api_key = os.getenv('OPENAI_API_KEY')
         if not api_key:
             raise ValueError("OPENAI_API_KEY environment variable is not set")
