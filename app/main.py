@@ -1,6 +1,7 @@
 import uvicorn
 import json
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Dict
 from datetime import datetime, timezone
 from bson import ObjectId, json_util
@@ -20,6 +21,14 @@ async def lifespan(app: FastAPI):
     await db.close_db()
 
 app = FastAPI(lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.post("/api/onboarding")
 async def user_onboarding(user: User):
