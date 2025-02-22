@@ -1,13 +1,15 @@
 import openai
 import os
+import random
 from typing import List, Optional, Dict
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from app.models import (
     DailyLog, Recommendation, User
 )
+from bson import ObjectId
 
 class FitnessLLMAgent:
-    def __init__(self, model: str = "gpt-4o-mini", temperature: float = 0.7):
+    def __init__(self, model: str = "gpt-3.5-turbo", temperature: float = 0.7):
         """Initialize OpenAI client with API key from environment variable and default parameters."""
         api_key = os.getenv('OPENAI_API_KEY')
         if not api_key:
@@ -270,33 +272,34 @@ Please provide specific, actionable recommendations for improving fitness and he
         except Exception as e:
             raise Exception(f"Error generating recommendations: {str(e)}")
 
-    def generate_next_day_plan(self, user: Dict, daily_log: DailyLog) -> str:
+    def generate_next_day_plan(self, user: dict, daily_log: DailyLog) -> List[Recommendation]:
         """
         Generate personalized guidance for the next day based on today's activity log.
         
         Args:
-            user: Dictionary containing user details (age, weight, height, geography)
+            user: User object containing user details
             daily_log: DailyLog object containing today's activity data
         
         Returns:
-            str: Personalized message with guidance for tomorrow
+            Recommendation: Personalized recommendation object with guidance for tomorrow
         """
         prompt = f"""Based on today's activity log and user profile, provide personalized guidance for tomorrow:
 
 User Profile:
-- Age: {user.get('age')}
-- Weight: {user.get('weight')}
-- Height: {user.get('height')}
-- Location: {user.get('geography')}
+- Age: {user["age"]}
+- Weight: {user["weight"]}
+- Height: {user["height"]}
+- Location: {user["geography"]}
 Today's Activity:
 - Calories: {daily_log.calories}
 - Activity Level: {daily_log.activity_level}
 
-Please provide:
-1. A brief analysis of today's activity
-2. Specific recommendations for tomorrow's workout and nutrition
-3. Any adjustments needed based on today's performance
-4. A motivational message
+Output format:
+The text should conatin only the pipe separated tasks for tomorrow.
+
+Example:
+Task 1 | Task 2 | Task 3 | Task 4
+
 """
         messages = [
             {"role": "system", "content": self.system_prompt},
@@ -309,6 +312,31 @@ Please provide:
                 messages=messages,
                 temperature=self.temperature
             )
-            return response.choices[0].message.content
+            # Create and return a Recommendation object
+            return [Recommendation(
+                user_id=str(user["_id"]),
+                task=msg,
+                due_date=datetime.now(timezone.utc) + timedelta(days=1)  # Set due date to tomorrow
+            ) for msg in response.choices[0].message.content.split("|")]
+
+            # FALLBACK_TASKS = [
+            #     "Complete 30 minutes of moderate-intensity cardio and focus on staying hydrated throughout the day.",
+            #     "Do a full-body strength training workout with 3 sets of 12 reps each. Don't forget to stretch!",
+            #     "Take a rest day focusing on light stretching and getting 8 hours of sleep tonight.",
+            #     "Try HIIT workout: 30 seconds high intensity followed by 30 seconds rest, repeat 10 times.",
+            #     "Focus on core strength today with a 20-minute ab workout and maintain a balanced diet.",
+            #     "Go for a 45-minute walk and include 5 minutes of brisk walking every 10 minutes.",
+            #     "Practice yoga or mobility exercises for 30 minutes to improve flexibility.",
+            #     "Do bodyweight exercises: 20 push-ups, 30 squats, 15 burpees, repeat 3 times.",
+            #     "Combine 20 minutes of cardio with 20 minutes of strength training for a balanced workout.",
+            #     "Focus on recovery: light swimming or cycling, followed by 10 minutes of meditation."
+            # ]
+
+            # # Create recommendation using the model's expected format
+            # return [Recommendation(
+            #     user_id=str(user["_id"]),
+            #     task=random.choice(FALLBACK_TASKS),
+            #     due_date=datetime.now(timezone.utc) + timedelta(days=1)
+            # )]
         except Exception as e:
             raise Exception(f"Error generating next day plan: {str(e)}")
