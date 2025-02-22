@@ -283,24 +283,41 @@ Please provide specific, actionable recommendations for improving fitness and he
         Returns:
             Recommendation: Personalized recommendation object with guidance for tomorrow
         """
-        prompt = f"""Based on today's activity log and user profile, provide personalized guidance for tomorrow:
+        # Calculate averages from the last 7 days of logs
+        recent_logs = sorted(user.get('daily_logs', [])[-7:], key=lambda x: x["date"])
+        avg_calories = sum(log["calories"] for log in recent_logs) / len(recent_logs) if recent_logs else 0
+        avg_activity = sum(log["activity_level"] for log in recent_logs) / len(recent_logs) if recent_logs else 0
+
+
+        prompt = f"""Based on today's activity log and user profile, create specific, actionable tasks for tomorrow:
 
 User Profile:
 - Age: {user["age"]}
 - Weight: {user["weight"]}
 - Height: {user["height"]}
 - Location: {user["geography"]}
+
 Today's Activity:
 - Calories: {daily_log.calories}
 - Activity Level: {daily_log.activity_level}
 
-Output format:
-The text should conatin only the pipe separated tasks for tomorrow.
+7-Day Averages:
+- Average Calories: {avg_calories:.0f}
+- Average Activity Level: {avg_activity:.1f}
 
-Example:
-Task 1 | Task 2 | Task 3 | Task 4
 
-"""
+Requirements:
+1. Generate 3-4 specific, actionable tasks
+2. Include at least one exercise-related task
+3. Include at least one nutrition-related task
+4. Tasks should be achievable within 24 hours
+5. Consider user's activity level trend when suggesting intensity
+
+Output Format:
+Provide ONLY tasks separated by pipe symbols (|). Example:
+Complete 30 minutes of jogging | Drink 8 glasses of water | Do 3 sets of 15 push-ups | Prepare healthy meal prep for tomorrow
+
+Do not include any other text or explanations in the output."""
         messages = [
             {"role": "system", "content": self.system_prompt},
             {"role": "user", "content": prompt}
