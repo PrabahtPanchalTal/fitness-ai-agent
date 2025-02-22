@@ -2,27 +2,22 @@ import os
 from motor.motor_asyncio import AsyncIOMotorClient
 from typing import Optional
 from urllib.parse import quote_plus
+from dotenv import load_dotenv
 
 class Database:
     def __init__(self):
+        # Load environment variables from .env file
+        load_dotenv()
         self.client: Optional[AsyncIOMotorClient] = None
         self.db = None
 
     async def connect_db(self):
-        username = os.getenv("MONGO_USERNAME")
-        password = os.getenv("MONGO_PASSWORD")
-        host = os.getenv("MONGO_HOST")
-        port = os.getenv("MONGO_PORT")
+        mongodb_uri = os.getenv("MONGO_URI")
 
-        if not all([username, password, host, port]):
+        if not all([mongodb_uri]):
             raise ValueError("Missing MongoDB environment variables")
-
-        # Only quote if values exist
-        username = quote_plus(str(username))
-        password = quote_plus(str(password))
         
-        mongodb_url = f"mongodb://{username}:{password}@{host}:{port}"
-        self.client = AsyncIOMotorClient(mongodb_url)
+        self.client = AsyncIOMotorClient(mongodb_uri)
         
         # Get database name from environment variable
         # db_name = os.getenv("MONGO_DB_NAME")
