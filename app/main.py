@@ -103,6 +103,22 @@ async def get_user_profile(user_id: str):
     
     return {"user": user}
 
+@app.post("/api/markTaskDone")
+async def mark_task_done(task_data: dict):
+    task_id = task_data.get("task_id")
+    if not ObjectId.is_valid(task_id):
+        raise HTTPException(status_code=400, detail="Invalid task ID")
+    
+    result = await db.recommendations.update_one(
+        {"_id": ObjectId(task_id)},
+        {"$set": {"is_done": True}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    return {"message": "Task marked as done successfully"}
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=5050)
 

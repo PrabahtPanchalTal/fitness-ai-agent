@@ -42,6 +42,7 @@ class Recommendation(BaseModel):
     user_id: str
     task: str
     due_date: datetime
+    is_done: bool = Field(default=False)
     class Config:
         json_encoders = {ObjectId: str}
         allow_population_by_field_name = True
